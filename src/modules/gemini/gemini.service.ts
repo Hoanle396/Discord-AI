@@ -9,7 +9,7 @@ export class GeminiService {
 
   constructor(private configService: ConfigService) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
-    
+
     if (!apiKey) {
       this.logger.error('Gemini API key not found in environment variables');
       return;
@@ -24,15 +24,7 @@ export class GeminiService {
         throw new Error('Gemini AI not initialized');
       }
 
-      const model = this.genAI.getGenerativeModel({ 
-        model: 'gemini-2.5-pro',
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.8,
-          topK: 40,
-          maxOutputTokens: 1024,
-        },
-      });
+      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
       // Health care context for better responses
       const healthContext = `You are a helpful health care assistant bot. Your role is to:
