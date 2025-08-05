@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Health Bot - Real-time Monitor</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        .panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .panel h3 {
+            margin: 0 0 15px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.connected {
+            background: #27ae60;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .event-log {
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .event {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+            background: #f1f3f4;
+            font-size: 0.9em;
+        }
+        
+        .event.health-record { border-left-color: #27ae60; }
+        .event.reminder { border-left-color: #f39c12; }
+        .event.ai-insight { border-left-color: #9b59b6; }
+        .event.alert { border-left-color: #e74c3c; }
+        
+        .event-time {
+            color: #666;
+            font-size: 0.8em;
+            float: right;
+        }
+        
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .control-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .control-group label {
+            font-weight: 500;
+            min-width: 120px;
+        }
+        
+        input[type="text"], button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .message-input {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .message-input input {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Discord Health Bot Monitor</h1>
+            <p>Real-time health monitoring with AI insights and server-sent events</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalUsers">-</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalRecords">-</div>
+                <div class="stat-label">Health Records</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="activeReminders">-</div>
+                <div class="stat-label">Active Reminders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="uptime">-</div>
+                <div class="stat-label">Uptime (hours)</div>
+            </div>
+        </div>
+        
+        <div class="dashboard">
+            <div class="panel">
+                <h3>
+                    🔴 Server-Sent Events
+                    <span class="status-indicator" id="sseStatus"></span>
+                </h3>
+                <p>Real-time health events stream</p>
+                <div class="event-log" id="sseEvents"></div>
+            </div>
+            
+            <div class="panel">
+                <h3>
+                    ⚡ WebSocket Connection
+                    <span class="status-indicator" id="wsStatus"></span>
+                </h3>
+                <p>Interactive real-time communication</p>
+                <div class="event-log" id="wsEvents"></div>
+                <div class="message-input">
+                    <input type="text" id="chatMessage" placeholder="Ask AI about health..." disabled>
+                    <button onclick="sendAIMessage()" id="sendBtn" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <h3>🎛️ Controls</h3>
+            <div class="control-group">
+                <label>Discord User ID:</label>
+                <input type="text" id="userIdInput" placeholder="Enter Discord User ID">
+                <button onclick="connectToUser()">Connect to User</button>
+            </div>
+            <div class="control-group">
+                <label>Actions:</label>
+                <button onclick="connectSSE()">Connect SSE</button>
+                <button onclick="disconnectSSE()">Disconnect SSE</button>
+                <button onclick="connectWebSocket()">Connect WebSocket</button>
+                <button onclick="disconnectWebSocket()">Disconnect WebSocket</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let eventSource = null;
+        let socket = null;
+        let currentUserId = null;
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            connectSSE();
+            connectWebSocket();
+            loadSystemStats();
+        });
+
+        // Server-Sent Events
+        function connectSSE() {
+            const userId = currentUserId ? `?userId=${currentUserId}` : '';
+            eventSource = new EventSource(`/health-monitor/events${userId}`);
+            
+            eventSource.onopen = function() {
+                updateStatus('sseStatus', true);
+                addEvent('sseEvents', 'system', 'SSE Connected', 'Connected to health events stream');
+            };
+            
+            eventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (Array.isArray(data)) {
+                        data.forEach(item => {
+                            addEvent('sseEvents', item.type, 'Health Update', 
+                                JSON.stringify(item.data, null, 2));
+                        });
+                    }
+                } catch (e) {
+                    addEvent('sseEvents', 'error', 'Parse Error', event.data);
+                }
+            };
+            
+            eventSource.onerror = function() {
+                updateStatus('sseStatus', false);
+                addEvent('sseEvents', 'error', 'SSE Error', 'Connection lost');
+            };
+        }
+
+        function disconnectSSE() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+                updateStatus('sseStatus', false);
+                addEvent('sseEvents', 'system', 'SSE Disconnected', 'Manually disconnected');
+            }
+        }
+
+        // WebSocket
+        function connectWebSocket() {
+            socket = io('/health');
+            
+            socket.on('connect', function() {
+                updateStatus('wsStatus', true);
+                addEvent('wsEvents', 'system', 'WebSocket Connected', `Socket ID: ${socket.id}`);
+                document.getElementById('chatMessage').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+            });
+            
+            socket.on('disconnect', function() {
+                updateStatus('wsStatus', false);
+                addEvent('wsEvents', 'system', 'WebSocket Disconnected', 'Connection lost');
+                document.getElementById('chatMessage').disabled = true;
+                document.getElementById('sendBtn').disabled = true;
+            });
+            
+            socket.on('connection-confirmed', function(data) {
+                addEvent('wsEvents', 'system', 'Connection Confirmed', data.message);
+            });
+            
+            socket.on('system-stats', function(data) {
+                updateSystemStats(data);
+            });
+            
+            socket.on('user-health-summary', function(data) {
+                addEvent('wsEvents', 'health-record', 'User Health Summary', 
+                    `User: ${data.user.username}, Today's records: ${data.today.recordsCount}`);
+            });
+            
+            socket.on('health-record-saved', function(data) {
+                addEvent('wsEvents', 'health-record', 'Health Record Saved', 
+                    `${data.record.type}: ${data.record.value}`);
+            });
+            
+            socket.on('reminder-alert', function(data) {
+                addEvent('wsEvents', 'reminder', 'Reminder Alert', 
+                    `${data.reminder.title} - ${data.reminder.description}`);
+            });
+            
+            socket.on('health-alert', function(data) {
+                addEvent('wsEvents', 'alert', 'Health Alert', 
+                    `Severity: ${data.alert.severity}`);
+            });
+            
+            socket.on('ai-response', function(data) {
+                addEvent('wsEvents', 'ai-insight', 'AI Response', data.response);
+            });
+            
+            socket.on('error', function(data) {
+                addEvent('wsEvents', 'error', 'Error', data.message);
+            });
+        }
+
+        function disconnectWebSocket() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+                updateStatus('wsStatus', false);
+                addEvent('wsEvents', 'system', 'WebSocket Disconnected', 'Manually disconnected');
+            }
+        }
+
+        function connectToUser() {
+            const userId = document.getElementById('userIdInput').value.trim();
+            if (!userId) {
+                alert('Please enter a Discord User ID');
+                return;
+            }
+            
+            currentUserId = userId;
+            
+            // Reconnect SSE with user filter
+            disconnectSSE();
+            connectSSE();
+            
+            // Join user room in WebSocket
+            if (socket && socket.connected) {
+                socket.emit('join-user-room', { discordId: userId });
+                addEvent('wsEvents', 'system', 'Joined User Room', `Monitoring user: ${userId}`);
+            }
+        }
+
+        function sendAIMessage() {
+            const message = document.getElementById('chatMessage').value.trim();
+            const userId = currentUserId || 'anonymous';
+            
+            if (!message) return;
+            
+            if (socket && socket.connected) {
+                socket.emit('request-ai-chat', {
+                    message: message,
+                    discordId: userId
+                });
+                
+                addEvent('wsEvents', 'ai-insight', 'AI Query', `You: ${message}`);
+                document.getElementById('chatMessage').value = '';
+            } else {
+                alert('WebSocket not connected');
+            }
+        }
+
+        // Utility functions
+        function updateStatus(elementId, connected) {
+            const element = document.getElementById(elementId);
+            if (connected) {
+                element.classList.add('connected');
+            } else {
+                element.classList.remove('connected');
+            }
+        }
+
+        function addEvent(containerId, type, title, message) {
+            const container = document.getElementById(containerId);
+            const event = document.createElement('div');
+            event.className = `event ${type}`;
+            
+            const time = new Date().toLocaleTimeString();
+            event.innerHTML = `
+                <div class="event-time">${time}</div>
+                <strong>${title}</strong><br>
+                <small>${message}</small>
+            `;
+            
+            container.insertBefore(event, container.firstChild);
+            
+            // Keep only last 20 events
+            while (container.children.length > 20) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        async function loadSystemStats() {
+            try {
+                const response = await fetch('/health-monitor/status');
+                const data = await response.json();
+                updateSystemStats(data);
+            } catch (error) {
+                console.error('Failed to load system stats:', error);
+            }
+        }
+
+        function updateSystemStats(data) {
+            if (data.statistics || data.totals) {
+                const stats = data.statistics || data.totals;
+                document.getElementById('totalUsers').textContent = stats.totalUsers || stats.users || '-';
+                document.getElementById('totalRecords').textContent = stats.totalRecords || stats.records || '-';
+                document.getElementById('activeReminders').textContent = stats.activeReminders || '-';
+            }
+            
+            if (data.uptime !== undefined) {
+                document.getElementById('uptime').textContent = Math.floor(data.uptime / 3600);
+            }
+        }
+
+        // Handle Enter key in chat input
+        document.getElementById('chatMessage').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendAIMessage();
+            }
+        });
+    </script>
+</body>
+</html>
