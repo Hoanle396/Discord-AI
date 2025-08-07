@@ -29,23 +29,17 @@ export class Reminder {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({
-    type: 'enum',
-    enum: ReminderType,
-  })
-  type: ReminderType;
+  @Column()
+  type: string; // Using string instead of enum for SQLite compatibility
 
-  @Column({
-    type: 'enum',
-    enum: ReminderFrequency,
-  })
-  frequency: ReminderFrequency;
+  @Column()
+  frequency: string; // Using string instead of enum for SQLite compatibility
 
   @Column()
   reminderTime: string; // Format: HH:MM
 
-  @Column({ type: 'json', nullable: true })
-  customSchedule: any; // For custom frequency patterns
+  @Column({ type: 'text', nullable: true })
+  customSchedule: string; // JSON stored as string for custom frequency patterns
 
   @Column({ default: true })
   isActive: boolean;

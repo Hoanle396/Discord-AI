@@ -20,14 +20,11 @@ export class HealthRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({
-    type: 'enum',
-    enum: HealthRecordType,
-  })
-  type: HealthRecordType;
+  @Column()
+  type: string; // Using string instead of enum for SQLite compatibility
 
-  @Column({ type: 'json' })
-  data: any;
+  @Column({ type: 'text' })
+  data: string; // JSON stored as string
 
   @Column({ type: 'text', nullable: true })
   notes: string;

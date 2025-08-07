@@ -12,12 +12,8 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
 
   createTypeOrmOptions(): TypeOrmModuleOptions {
     return {
-      type: 'postgres',
-      host: this.configService.get('DATABASE_HOST'),
-      port: parseInt(this.configService.get('DATABASE_PORT'), 10),
-      username: this.configService.get('DATABASE_USERNAME'),
-      password: this.configService.get('DATABASE_PASSWORD'),
-      database: this.configService.get('DATABASE_NAME'),
+      type: 'sqlite',
+      database: this.configService.get('DATABASE_PATH') || 'data/discord-health-bot.db',
       entities: [User, HealthRecord, Reminder, EmergencyContact],
       synchronize: this.configService.get('NODE_ENV') === 'development',
       logging: this.configService.get('NODE_ENV') === 'development',

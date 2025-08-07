@@ -17,8 +17,8 @@ export class User {
   @Column({ nullable: true })
   timezone: string;
 
-  @Column({ type: 'json', nullable: true })
-  preferences: any;
+  @Column({ type: 'text', nullable: true })
+  preferences: string; // JSON stored as string
 
   @CreateDateColumn()
   createdAt: Date;
