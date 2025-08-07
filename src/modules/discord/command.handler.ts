@@ -37,29 +37,34 @@ export class CommandHandler {
     try {
       switch (command) {
         case 'ping':
-          await message.reply('Pong! 🏓 Bot is healthy and running!');
+          await message.reply('Pong! 🏓 Bot đang hoạt động tốt!');
           break;
         case 'health':
+        case 'suckhoe':
           await this.handleHealthCommand(message, args, user);
           break;
         case 'reminder':
+        case 'nhacnho':
           await this.handleReminderCommand(message, args, user);
           break;
         case 'emergency':
+        case 'khancap':
           await this.handleEmergencyCommand(message, args, user);
           break;
         case 'stats':
+        case 'thongke':
           await this.handleStatsCommand(message, user);
           break;
         case 'help':
+        case 'trogiup':
           await this.sendHelpMessage(message);
           break;
         default:
-          await message.reply('Unknown command. Type `!help` for available commands.');
+          await message.reply('Lệnh không hợp lệ. Gõ `!help` hoặc `!trogiup` để xem các lệnh có sẵn.');
       }
     } catch (error) {
       this.logger.error('Error handling command:', error);
-      await message.reply('Sorry, there was an error processing your command. Please try again.');
+      await message.reply('Xin lỗi, đã xảy ra lỗi khi xử lý lệnh của bạn. Vui lòng thử lại.');
     }
   }
 
@@ -70,9 +75,9 @@ export class CommandHandler {
       const user = await this.ensureUserExists(message.author.id, message.author.username);
       
       // Add health context for AI
-      const healthContext = `User: ${user.username}\n`;
+      const healthContext = `Người dùng: ${user.username}\n`;
       const cleanMessage = message.content.replace(/<@!?\d+>/g, '').trim();
-      const prompt = `${healthContext}Health Bot Context: You are a helpful health care assistant. Respond to health-related questions, provide general wellness advice, and help with health tracking. Always remind users to consult healthcare professionals for serious concerns.\n\nUser Message: ${cleanMessage}`;
+      const prompt = `${healthContext}Ngữ cảnh Bot Sức khỏe: Bạn là một trợ lý chăm sóc sức khỏe hữu ích. Trả lời các câu hỏi liên quan đến sức khỏe, đưa ra lời khuyên về chăm sóc sức khỏe tổng quát, và giúp theo dõi sức khỏe. Luôn nhắc nhở người dùng tham khảo ý kiến của các chuyên gia y tế cho những vấn đề nghiêm trọng. Trả lời bằng tiếng Việt.\n\nTin nhắn của người dùng: ${cleanMessage}`;
 
       const response = await this.geminiService.generateResponse(prompt);
       
@@ -87,7 +92,7 @@ export class CommandHandler {
       }
     } catch (error) {
       this.logger.error('Error in AI chat:', error);
-      await message.reply('Sorry, I had trouble processing your message. Please try again or use specific commands.');
+      await message.reply('Xin lỗi, tôi gặp khó khăn khi xử lý tin nhắn của bạn. Vui lòng thử lại hoặc sử dụng các lệnh cụ thể.');
     }
   }
 
@@ -133,22 +138,24 @@ export class CommandHandler {
 
     switch (subCommand) {
       case 'record':
+      case 'ghi':
         await this.recordHealthData(message, args.slice(1), user);
         break;
       case 'history':
+      case 'lichsu':
         await this.showHealthHistory(message, user);
         break;
       case 'bmi':
         await this.calculateBMI(message, args.slice(1), user);
         break;
       default:
-        await message.reply('🏥 **Health Commands**\n`!health record <type> <value> <notes>` - Record health data\n`!health history` - View health history\n`!health bmi <height> <weight>` - Calculate BMI');
+        await message.reply('🏥 **Lệnh Sức khỏe**\n`!health ghi <loại> <giá trị> <ghi chú>` - Ghi lại dữ liệu sức khỏe\n`!health lichsu` - Xem lịch sử sức khỏe\n`!health bmi <chiều cao> <cân nặng>` - Tính chỉ số BMI');
     }
   }
 
   private async recordHealthData(message: Message, args: string[], user: User) {
     if (args.length < 2) {
-      await message.reply('📝 **Record Health Data**\nUsage: `!health record <type> <value> [notes]`\nTypes: weight, blood_pressure, heart_rate, glucose, temperature, medication\nExample: `!health record weight 70kg Feeling good today`');
+      await message.reply('📝 **Ghi lại Dữ liệu Sức khỏe**\nCách dùng: `!health ghi <loại> <giá trị> [ghi chú]`\nCác loại: cannang, huyetap, nhiptim, duonghuyet, nhietdo, thuoc\nVí dụ: `!health ghi cannang 70kg Cảm thấy khỏe mạnh hôm nay`');
       return;
     }
 
@@ -156,18 +163,28 @@ export class CommandHandler {
     const value = args[1];
     const notes = args.slice(2).join(' ') || '';
 
-    const validTypes = ['weight', 'blood_pressure', 'heart_rate', 'glucose', 'temperature', 'medication', 'exercise', 'sleep'];
+    const validTypes = ['cannang', 'huyetap', 'nhiptim', 'duonghuyet', 'nhietdo', 'thuoc', 'tapthe', 'ngu'];
+    const typeMap = {
+      'cannang': 'weight',
+      'huyetap': 'blood_pressure', 
+      'nhiptim': 'heart_rate',
+      'duonghuyet': 'glucose',
+      'nhietdo': 'temperature',
+      'thuoc': 'medication',
+      'tapthe': 'exercise',
+      'ngu': 'sleep'
+    };
     
     if (!validTypes.includes(type)) {
-      await message.reply(`❌ Invalid type. Valid types: ${validTypes.join(', ')}`);
+      await message.reply(`❌ Loại không hợp lệ. Các loại hợp lệ: ${validTypes.join(', ')}`);
       return;
     }
 
     try {
       const healthRecord = this.healthRecordRepository.create({
         user,
-        type: type as any, // Cast to enum if needed
-        data:value,
+        type: typeMap[type] as any,
+        data: value,
         notes,
         recordedAt: new Date(),
       });
@@ -176,15 +193,15 @@ export class CommandHandler {
       
       // Generate AI advice
       const aiAdvice = await this.geminiService.generateHealthAdvice({
-        type,
+        type: typeMap[type],
         value,
         notes,
       });
 
-      await message.reply(`✅ **Health Record Saved**\n📊 Type: ${type}\n📈 Value: ${value}\n📝 Notes: ${notes || 'None'}\n🕐 Time: ${new Date().toLocaleString()}\n\n🤖 **AI Advice**: ${aiAdvice}`);
+      await message.reply(`✅ **Đã Lưu Dữ liệu Sức khỏe**\n📊 Loại: ${type}\n📈 Giá trị: ${value}\n📝 Ghi chú: ${notes || 'Không có'}\n🕐 Thời gian: ${new Date().toLocaleString('vi-VN')}\n\n🤖 **Lời khuyên AI**: ${aiAdvice}`);
     } catch (error) {
       this.logger.error('Error saving health record:', error);
-      await message.reply('❌ Failed to save health record. Please try again.');
+      await message.reply('❌ Không thể lưu dữ liệu sức khỏe. Vui lòng thử lại.');
     }
   }
 
@@ -197,16 +214,16 @@ export class CommandHandler {
       });
 
       if (records.length === 0) {
-        await message.reply('📊 **Health History**\nNo health records found. Start recording with `!health record`');
+        await message.reply('📊 **Lịch sử Sức khỏe**\nKhông tìm thấy dữ liệu sức khỏe nào. Bắt đầu ghi lại với `!health ghi`');
         return;
       }
 
       const historyEmbed = {
         color: 0x00ff00,
-        title: '📊 Your Recent Health History',
+        title: '📊 Lịch sử Sức khỏe Gần đây của Bạn',
         fields: records.map((record, index) => ({
           name: `${index + 1}. ${record.type.toUpperCase()}`,
-          value: `📈 **Value:** ${record.data}\n📝 **Notes:** ${record.notes || 'None'}\n🕐 **Date:** ${record.recordedAt.toLocaleDateString()}`,
+          value: `📈 **Giá trị:** ${record.data}\n📝 **Ghi chú:** ${record.notes || 'Không có'}\n🕐 **Ngày:** ${new Date(record.recordedAt).toLocaleDateString('vi-VN')}`,
           inline: true,
         })),
         timestamp: new Date().toISOString(),
@@ -215,13 +232,13 @@ export class CommandHandler {
       await message.reply({ embeds: [historyEmbed] });
     } catch (error) {
       this.logger.error('Error fetching health history:', error);
-      await message.reply('❌ Failed to fetch health history. Please try again.');
+      await message.reply('❌ Không thể lấy lịch sử sức khỏe. Vui lòng thử lại.');
     }
   }
 
   private async calculateBMI(message: Message, args: string[], user: User) {
     if (args.length < 2) {
-      await message.reply('📏 **BMI Calculator**\nUsage: `!health bmi <height_cm> <weight_kg>`\nExample: `!health bmi 175 70`');
+      await message.reply('📏 **Máy tính BMI**\nCách dùng: `!health bmi <chiều_cao_cm> <cân_nặng_kg>`\nVí dụ: `!health bmi 175 70`');
       return;
     }
 
@@ -229,7 +246,7 @@ export class CommandHandler {
     const weight = parseFloat(args[1]);
 
     if (isNaN(height) || isNaN(weight) || height <= 0 || weight <= 0) {
-      await message.reply('❌ Please provide valid height (cm) and weight (kg) values.');
+      await message.reply('❌ Vui lòng cung cấp chiều cao (cm) và cân nặng (kg) hợp lệ.');
       return;
     }
 
@@ -240,30 +257,30 @@ export class CommandHandler {
     let color = 0x00ff00;
 
     if (bmi < 18.5) {
-      category = 'Underweight';
+      category = 'Thiếu cân';
       color = 0xffa500;
     } else if (bmi < 25) {
-      category = 'Normal weight';
+      category = 'Cân nặng bình thường';
       color = 0x00ff00;
     } else if (bmi < 30) {
-      category = 'Overweight';
+      category = 'Thừa cân';
       color = 0xffa500;
     } else {
-      category = 'Obese';
+      category = 'Béo phì';
       color = 0xff0000;
     }
 
     const bmiEmbed = {
       color,
-      title: '📏 BMI Calculation Result',
+      title: '📏 Kết quả Tính BMI',
       fields: [
         { name: '📊 BMI', value: bmi.toFixed(1), inline: true },
-        { name: '📋 Category', value: category, inline: true },
-        { name: '📏 Height', value: `${height} cm`, inline: true },
-        { name: '⚖️ Weight', value: `${weight} kg`, inline: true },
+        { name: '📋 Phân loại', value: category, inline: true },
+        { name: '📏 Chiều cao', value: `${height} cm`, inline: true },
+        { name: '⚖️ Cân nặng', value: `${weight} kg`, inline: true },
       ],
       footer: {
-        text: 'Note: BMI is a general indicator. Consult healthcare professionals for personalized advice.',
+        text: 'Lưu ý: BMI chỉ là chỉ số tham khảo. Hãy tham khảo ý kiến chuyên gia y tế để có lời khuyên cá nhân hóa.',
       },
     };
 
@@ -275,7 +292,7 @@ export class CommandHandler {
         user,
         type: HealthRecordType.BMI,
         data: bmi.toFixed(1) as any,
-        notes: `Height: ${height}cm, Weight: ${weight}kg, Category: ${category}`,
+        notes: `Chiều cao: ${height}cm, Cân nặng: ${weight}kg, Phân loại: ${category}`,
         recordedAt: new Date(),
       });
       await this.healthRecordRepository.save(healthRecord);
@@ -289,22 +306,25 @@ export class CommandHandler {
 
     switch (subCommand) {
       case 'add':
+      case 'them':
         await this.addReminder(message, args.slice(1), user);
         break;
       case 'list':
+      case 'danhsach':
         await this.listReminders(message, user);
         break;
       case 'delete':
+      case 'xoa':
         await this.deleteReminder(message, args.slice(1), user);
         break;
       default:
-        await message.reply('⏰ **Reminder Commands**\n`!reminder add <time> <message>` - Add new reminder\n`!reminder list` - View active reminders\n`!reminder delete <id>` - Delete reminder\n\nTime format: HH:MM (24-hour) or "daily HH:MM"');
+        await message.reply('⏰ **Lệnh Nhắc nhở**\n`!reminder them <thời gian> <tin nhắn>` - Thêm nhắc nhở mới\n`!reminder danhsach` - Xem các nhắc nhở đang hoạt động\n`!reminder xoa <id>` - Xóa nhắc nhở\n\nĐịnh dạng thời gian: HH:MM (24 giờ) hoặc "hangngay HH:MM"');
     }
   }
 
   private async addReminder(message: Message, args: string[], user: User) {
     if (args.length < 2) {
-      await message.reply('⏰ **Add Reminder**\nUsage: `!reminder add <time> <title> [description]`\nExamples:\n`!reminder add 14:30 "Take medication" Daily blood pressure pills`\n`!reminder add daily 08:00 "Morning vitamins"`');
+      await message.reply('⏰ **Thêm Nhắc nhở**\nCách dùng: `!reminder them <thời gian> <tiêu đề> [mô tả]`\nVí dụ:\n`!reminder them 14:30 "Uống thuốc" Thuốc huyết áp hàng ngày`\n`!reminder them hangngay 08:00 "Vitamin buổi sáng"`');
       return;
     }
 
@@ -313,7 +333,7 @@ export class CommandHandler {
     let title = '';
     let description = '';
     
-    if (args[0].toLowerCase() === 'daily') {
+    if (args[0].toLowerCase() === 'hangngay' || args[0].toLowerCase() === 'daily') {
       frequency = 'daily';
       timeStr = args[1];
       title = args.slice(2, 3).join(' ').replace(/"/g, '');
@@ -326,7 +346,7 @@ export class CommandHandler {
     // Validate time format (HH:MM)
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(timeStr)) {
-      await message.reply('❌ Invalid time format. Please use HH:MM (24-hour format).');
+      await message.reply('❌ Định dạng thời gian không hợp lệ. Vui lòng sử dụng HH:MM (định dạng 24 giờ).');
       return;
     }
 
@@ -343,11 +363,11 @@ export class CommandHandler {
 
       await this.reminderRepository.save(reminder);
       
-      const recurringText = frequency === 'daily' ? 'daily ' : 'one-time ';
-      await message.reply(`✅ **Reminder Set**\n⏰ ${recurringText}reminder at ${timeStr}\n📝 Title: "${title}"\n📄 Description: "${description || 'None'}"`);
+      const recurringText = frequency === 'daily' ? 'hàng ngày ' : 'một lần ';
+      await message.reply(`✅ **Đã Đặt Nhắc nhở**\n⏰ Nhắc nhở ${recurringText}lúc ${timeStr}\n📝 Tiêu đề: "${title}"\n📄 Mô tả: "${description || 'Không có'}"`);
     } catch (error) {
       this.logger.error('Error saving reminder:', error);
-      await message.reply('❌ Failed to save reminder. Please try again.');
+      await message.reply('❌ Không thể lưu nhắc nhở. Vui lòng thử lại.');
     }
   }
 
@@ -359,39 +379,39 @@ export class CommandHandler {
       });
 
       if (reminders.length === 0) {
-        await message.reply('⏰ **Your Reminders**\nNo active reminders found. Add one with `!reminder add`');
+        await message.reply('⏰ **Nhắc nhở của Bạn**\nKhông tìm thấy nhắc nhở nào đang hoạt động. Thêm một cái với `!reminder them`');
         return;
       }
 
       const reminderEmbed = {
         color: 0xffa500,
-        title: '⏰ Your Active Reminders',
+        title: '⏰ Nhắc nhở Đang hoạt động của Bạn',
         fields: reminders.map((reminder) => ({
-          name: `${reminder.id}. ${reminder.frequency === 'daily' ? 'Daily' : 'One-time'} - ${reminder.reminderTime}`,
-          value: `📝 ${reminder.title}\n📄 ${reminder.description || 'No description'}`,
+          name: `${reminder.id}. ${reminder.frequency === 'daily' ? 'Hàng ngày' : 'Một lần'} - ${reminder.reminderTime}`,
+          value: `📝 ${reminder.title}\n📄 ${reminder.description || 'Không có mô tả'}`,
           inline: false,
         })),
         footer: {
-          text: 'Use !reminder delete <id> to remove a reminder',
+          text: 'Sử dụng !reminder xoa <id> để xóa nhắc nhở',
         },
       };
 
       await message.reply({ embeds: [reminderEmbed] });
     } catch (error) {
       this.logger.error('Error fetching reminders:', error);
-      await message.reply('❌ Failed to fetch reminders. Please try again.');
+      await message.reply('❌ Không thể lấy danh sách nhắc nhở. Vui lòng thử lại.');
     }
   }
 
   private async deleteReminder(message: Message, args: string[], user: User) {
     if (args.length === 0) {
-      await message.reply('❌ Please provide reminder ID. Use `!reminder list` to see IDs.');
+      await message.reply('❌ Vui lòng cung cấp ID nhắc nhở. Sử dụng `!reminder danhsach` để xem các ID.');
       return;
     }
 
     const reminderId = parseInt(args[0]);
     if (isNaN(reminderId)) {
-      await message.reply('❌ Please provide a valid reminder ID (number).');
+      await message.reply('❌ Vui lòng cung cấp ID nhắc nhở hợp lệ (số).');
       return;
     }
 
@@ -401,15 +421,15 @@ export class CommandHandler {
       });
 
       if (!reminder) {
-        await message.reply('❌ Reminder not found or you don\'t have permission to delete it.');
+        await message.reply('❌ Không tìm thấy nhắc nhở hoặc bạn không có quyền xóa nó.');
         return;
       }
 
       await this.reminderRepository.remove(reminder);
-      await message.reply(`✅ **Reminder Deleted**\nRemoved reminder: "${reminder.title}" at ${reminder.reminderTime}`);
+      await message.reply(`✅ **Đã Xóa Nhắc nhở**\nĐã xóa nhắc nhở: "${reminder.title}" lúc ${reminder.reminderTime}`);
     } catch (error) {
       this.logger.error('Error deleting reminder:', error);
-      await message.reply('❌ Failed to delete reminder. Please try again.');
+      await message.reply('❌ Không thể xóa nhắc nhở. Vui lòng thử lại.');
     }
   }
 
@@ -418,22 +438,25 @@ export class CommandHandler {
 
     switch (subCommand) {
       case 'add':
+      case 'them':
         await this.addEmergencyContact(message, args.slice(1), user);
         break;
       case 'list':
+      case 'danhsach':
         await this.listEmergencyContacts(message, user);
         break;
       case 'call':
+      case 'goi':
         await this.showEmergencyNumbers(message);
         break;
       default:
-        await message.reply('🚨 **Emergency Commands**\n`!emergency add <name> <phone> <relation>` - Add emergency contact\n`!emergency list` - View emergency contacts\n`!emergency call` - Show emergency numbers');
+        await message.reply('🚨 **Lệnh Khẩn cấp**\n`!emergency them <tên> <sđt> <mối quan hệ>` - Thêm liên hệ khẩn cấp\n`!emergency danhsach` - Xem liên hệ khẩn cấp\n`!emergency goi` - Hiển thị số điện thoại khẩn cấp');
     }
   }
 
   private async addEmergencyContact(message: Message, args: string[], user: User) {
     if (args.length < 3) {
-      await message.reply('🚨 **Add Emergency Contact**\nUsage: `!emergency add <name> <phone> <relation>`\nExample: `!emergency add "Dr. Smith" +1234567890 "Family Doctor"`');
+      await message.reply('🚨 **Thêm Liên hệ Khẩn cấp**\nCách dùng: `!emergency them <tên> <sđt> <mối quan hệ>`\nVí dụ: `!emergency them "Bác sĩ Nguyễn" +84123456789 "Bác sĩ gia đình"`');
       return;
     }
 
@@ -450,10 +473,10 @@ export class CommandHandler {
       });
 
       await this.emergencyContactRepository.save(contact);
-      await message.reply(`✅ **Emergency Contact Added**\n👤 Name: ${name}\n📞 Phone: ${phone}\n🏷️ Relation: ${relation}`);
+      await message.reply(`✅ **Đã Thêm Liên hệ Khẩn cấp**\n👤 Tên: ${name}\n📞 Số điện thoại: ${phone}\n🏷️ Mối quan hệ: ${relation}`);
     } catch (error) {
       this.logger.error('Error saving emergency contact:', error);
-      await message.reply('❌ Failed to save emergency contact. Please try again.');
+      await message.reply('❌ Không thể lưu liên hệ khẩn cấp. Vui lòng thử lại.');
     }
   }
 
@@ -465,42 +488,44 @@ export class CommandHandler {
       });
 
       if (contacts.length === 0) {
-        await message.reply('🚨 **Emergency Contacts**\nNo emergency contacts found. Add one with `!emergency add`');
+        await message.reply('🚨 **Liên hệ Khẩn cấp**\nKhông tìm thấy liên hệ khẩn cấp nào. Thêm một cái với `!emergency them`');
         return;
       }
 
       const contactEmbed = {
         color: 0xff0000,
-        title: '🚨 Your Emergency Contacts',
+        title: '🚨 Liên hệ Khẩn cấp của Bạn',
         fields: contacts.map((contact) => ({
           name: `👤 ${contact.name}`,
           value: `📞 ${contact.phoneNumber}\n🏷️ ${contact.relationship}`,
           inline: true,
         })),
         footer: {
-          text: 'Keep these contacts updated and accessible',
+          text: 'Hãy giữ những liên hệ này luôn được cập nhật và dễ tiếp cận',
         },
       };
 
       await message.reply({ embeds: [contactEmbed] });
     } catch (error) {
       this.logger.error('Error fetching emergency contacts:', error);
-      await message.reply('❌ Failed to fetch emergency contacts. Please try again.');
+      await message.reply('❌ Không thể lấy danh sách liên hệ khẩn cấp. Vui lòng thử lại.');
     }
   }
 
   private async showEmergencyNumbers(message: Message) {
     const emergencyEmbed = {
       color: 0xff0000,
-      title: '🚨 Emergency Numbers',
+      title: '🚨 Số điện thoại Khẩn cấp',
       fields: [
-        { name: '🚑 Emergency Services (US)', value: '911', inline: true },
-        { name: '☎️ Poison Control (US)', value: '1-800-222-1222', inline: true },
-        { name: '🧠 Mental Health Crisis', value: '988', inline: true },
-        { name: '📞 Crisis Text Line', value: 'Text HOME to 741741', inline: false },
+        { name: '🚑 Cấp cứu (Việt Nam)', value: '115', inline: true },
+        { name: '🚓 Công an (Việt Nam)', value: '113', inline: true },
+        { name: '🚒 Cứu hỏa (Việt Nam)', value: '114', inline: true },
+        { name: '☎️ Tổng đài cấp cứu 24/7', value: '19009095', inline: true },
+        { name: '🧠 Đường dây nóng tâm lý', value: '18001567', inline: true },
+        { name: '📞 Tư vấn sức khỏe', value: '19003888', inline: true },
       ],
       footer: {
-        text: 'In case of emergency, always call your local emergency number first',
+        text: 'Trong trường hợp khẩn cấp, hãy luôn gọi số cấp cứu địa phương trước',
       },
     };
 
@@ -515,7 +540,7 @@ export class CommandHandler {
       });
 
       if (!userWithRelations) {
-        await message.reply('❌ User not found. Please try again.');
+        await message.reply('❌ Không tìm thấy người dùng. Vui lòng thử lại.');
         return;
       }
 
@@ -523,12 +548,12 @@ export class CommandHandler {
 
       const statsEmbed = {
         color: 0x0099ff,
-        title: '📊 Your Health Bot Statistics',
+        title: '📊 Thống kê Bot Sức khỏe của Bạn',
         fields: [
-          { name: '📈 Health Records', value: (userWithRelations.healthRecords?.length || 0).toString(), inline: true },
-          { name: '⏰ Active Reminders', value: activeReminders.length.toString(), inline: true },
-          { name: '🚨 Emergency Contacts', value: (userWithRelations.emergencyContacts?.length || 0).toString(), inline: true },
-          { name: '📅 Member Since', value: userWithRelations.createdAt.toLocaleDateString(), inline: false },
+          { name: '📈 Dữ liệu Sức khỏe', value: (userWithRelations.healthRecords?.length || 0).toString(), inline: true },
+          { name: '⏰ Nhắc nhở Đang hoạt động', value: activeReminders.length.toString(), inline: true },
+          { name: '🚨 Liên hệ Khẩn cấp', value: (userWithRelations.emergencyContacts?.length || 0).toString(), inline: true },
+          { name: '📅 Thành viên từ', value: new Date(userWithRelations.createdAt).toLocaleDateString('vi-VN'), inline: false },
         ],
         timestamp: new Date().toISOString(),
       };
@@ -536,44 +561,44 @@ export class CommandHandler {
       await message.reply({ embeds: [statsEmbed] });
     } catch (error) {
       this.logger.error('Error fetching user stats:', error);
-      await message.reply('❌ Failed to fetch statistics. Please try again.');
+      await message.reply('❌ Không thể lấy thống kê. Vui lòng thử lại.');
     }
   }
 
   private async sendHelpMessage(message: Message) {
     const helpEmbed = {
       color: 0x0099ff,
-      title: '🏥 Health Care Bot Commands',
-      description: 'Your personal health assistant on Discord!',
+      title: '🏥 Lệnh Bot Chăm sóc Sức khỏe',
+      description: 'Trợ lý sức khỏe cá nhân của bạn trên Discord!',
       fields: [
         {
-          name: '🏓 Basic Commands',
-          value: '`!ping` - Check bot status\n`!help` - Show this help message\n`!stats` - View your statistics',
+          name: '🏓 Lệnh Cơ bản',
+          value: '`!ping` - Kiểm tra trạng thái bot\n`!help` hoặc `!trogiup` - Hiển thị tin nhắn trợ giúp này\n`!stats` hoặc `!thongke` - Xem thống kê của bạn',
           inline: false,
         },
         {
-          name: '🏥 Health Commands',
-          value: '`!health record <type> <value> [notes]` - Record health data\n`!health history` - View health history\n`!health bmi <height> <weight>` - Calculate BMI',
+          name: '🏥 Lệnh Sức khỏe',
+          value: '`!health ghi <loại> <giá trị> [ghi chú]` - Ghi dữ liệu sức khỏe\n`!health lichsu` - Xem lịch sử sức khỏe\n`!health bmi <chiều cao> <cân nặng>` - Tính BMI',
           inline: false,
         },
         {
-          name: '⏰ Reminder Commands',
-          value: '`!reminder add <time> <message>` - Add reminder\n`!reminder list` - View active reminders\n`!reminder delete <id>` - Delete reminder',
+          name: '⏰ Lệnh Nhắc nhở',
+          value: '`!reminder them <thời gian> <tin nhắn>` - Thêm nhắc nhở\n`!reminder danhsach` - Xem nhắc nhở đang hoạt động\n`!reminder xoa <id>` - Xóa nhắc nhở',
           inline: false,
         },
         {
-          name: '🚨 Emergency Commands',
-          value: '`!emergency add <name> <phone> <relation>` - Add contact\n`!emergency list` - View contacts\n`!emergency call` - Show emergency numbers',
+          name: '🚨 Lệnh Khẩn cấp',
+          value: '`!emergency them <tên> <sđt> <mối quan hệ>` - Thêm liên hệ\n`!emergency danhsach` - Xem liên hệ\n`!emergency goi` - Hiển thị số khẩn cấp',
           inline: false,
         },
         {
-          name: '🤖 AI Chat',
-          value: 'Mention me (@HealthBot) or DM me for natural conversation about health topics!',
+          name: '🤖 Trò chuyện AI',
+          value: 'Mention tôi (@HealthBot) hoặc nhắn tin riêng để trò chuyện tự nhiên về các chủ đề sức khỏe!',
           inline: false,
         },
       ],
       footer: {
-        text: 'Always consult healthcare professionals for serious medical concerns',
+        text: 'Luôn tham khảo ý kiến chuyên gia y tế cho những vấn đề sức khỏe nghiêm trọng',
       },
       timestamp: new Date().toISOString(),
     };
