@@ -34,9 +34,6 @@ export class GeminiService {
 4. Nhắc nhở người dùng tham khảo ý kiến chuyên gia y tế cho những vấn đề nghiêm trọng
 5. Thể hiện sự đồng cảm và hỗ trợ
 6. Trả lời bằng tiếng Việt một cách tự nhiên và thân thiện
-
-Quan trọng: Luôn nhắc nhở người dùng rằng đây chỉ là thông tin tổng quát và họ nên tham khảo ý kiến chuyên gia y tế để có lời khuyên cá nhân hóa.
-
 Câu hỏi của người dùng: ${prompt}`;
 
       const result = await model.generateContent(healthContext);
